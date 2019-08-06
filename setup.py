@@ -44,9 +44,7 @@ setup(
     long_description_content_type='text/markdown',
     install_requires=[
         'cffi',
-        'fastBPE',
         'numpy',
-        'regex',
         'sacrebleu',
         'torch',
         'tqdm',

@@ -147,13 +147,12 @@ class BaseFairseqModel(nn.Module):
         Load a :class:`~fairseq.models.FairseqModel` from a pre-trained model
         file. Downloads and caches the pre-trained model file if needed.
 
-        The base implementation returns a
-        :class:`~fairseq.hub_utils.GeneratorHubInterface`, which can be used to
-        generate translations or sample from language models. The underlying
-        :class:`~fairseq.models.FairseqModel` can be accessed via the
-        *generator.models* attribute.
+        The base implementation returns a :class:`fairseq.hub_utils.Generator`,
+        which can be used to generate translations or sample from language
+        models. The underlying :class:`~fairseq.models.FairseqModel` can be
+        accessed via the *generator.models* attribute.
 
-        Other models may override this to implement custom hub interfaces.
+        Other models may override this to implement custom PyTorch Hub APIs.
 
         Args:
             model_name_or_path (str): either the name of a pre-trained model to
@@ -173,7 +172,7 @@ class BaseFairseqModel(nn.Module):
             **kwargs,
         )
         print(x['args'])
-        return hub_utils.GeneratorHubInterface(x['args'], x['task'], x['models'])
+        return hub_utils.Generator(x['args'], x['task'], x['models'])
 
     @classmethod
     def hub_models(cls):

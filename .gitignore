@@ -114,3 +114,12 @@ fairseq/temporal_convolution_tbc
 
 # data
 data-bin/
+RTE-bin/
+COPA-bin/
+SWAG-bin/
+CB-bin/
+
+# process
+dict.txt
+vocab.bpe
+encoder.json

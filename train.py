@@ -18,6 +18,7 @@ from fairseq.data import iterators
 from fairseq.trainer import Trainer
 from fairseq.meters import AverageMeter, StopwatchMeter
 
+from sklearn.metrics import f1_score
 
 def main(args, init_distributed=False):
     utils.import_user_module(args)
@@ -107,7 +108,7 @@ def train(args, trainer, task, epoch_itr):
     # Initialize data iterator
     itr = epoch_itr.next_epoch_itr(
         fix_batches_to_gpus=args.fix_batches_to_gpus,
-        shuffle=(epoch_itr.epoch >= args.curriculum),
+        shuffle=False,
     )
     itr = iterators.GroupedIterator(itr, update_freq)
     progress = progress_bar.build_progress_bar(
@@ -119,6 +120,7 @@ def train(args, trainer, task, epoch_itr):
     max_update = args.max_update or math.inf
     for i, samples in enumerate(progress, start=epoch_itr.iterations_in_epoch):
         log_output = trainer.train_step(samples)
+        # print("train_step_log_output",log_output)
         if log_output is None:
             continue
 
@@ -129,6 +131,8 @@ def train(args, trainer, task, epoch_itr):
                 continue  # these are already logged above
             if 'loss' in k or k == 'accuracy':
                 extra_meters[k].update(v, log_output['sample_size'])
+            if k in ['preds', 'targets', 'f1']:
+                continue
             else:
                 extra_meters[k].update(v)
             stats[k] = extra_meters[k].avg
@@ -223,21 +227,36 @@ def validate(args, trainer, task, epoch_itr, subsets):
             if meter is not None:
                 meter.reset()
         extra_meters = collections.defaultdict(lambda: AverageMeter())
-
+        preds, targets =[], []
         for sample in progress:
+            # print(sample)
             log_output = trainer.valid_step(sample)
-
+            # print("valid_step_log_output",log_output)
             for k, v in log_output.items():
                 if k in ['loss', 'nll_loss', 'ntokens', 'nsentences', 'sample_size']:
                     continue
-                extra_meters[k].update(v)
-
+                elif k in ['f1']:
+                    continue
+                elif k== 'preds':
+                    preds.extend(v.tolist())
+                elif k == "targets":
+                    targets.extend(v.tolist())
+                else:
+                    extra_meters[k].update(v)
+        # print(preds,targets)
         # log validation stats
+        # print("extra_meters: ", extra_meters)
+        # print(f1_score(targets, preds, average='macro'))
+        extra_meters['f1'].update(f1_score(targets, preds, average='macro'))
+
         stats = get_valid_stats(trainer, args, extra_meters)
+        # print("stats2: ", stats)
         for k, meter in extra_meters.items():
+            # print(k,meter)
             stats[k] = meter.avg
         progress.print(stats, tag=subset, step=trainer.get_num_updates())
-
+        
+        # print("stats3: ", stats)
         valid_losses.append(
             stats[args.best_checkpoint_metric].avg
             if args.best_checkpoint_metric == 'loss'
@@ -256,10 +275,12 @@ def get_valid_stats(trainer, args, extra_meters=None):
         nll_loss = stats['loss']
     stats['ppl'] = utils.get_perplexity(nll_loss.avg)
     stats['num_updates'] = trainer.get_num_updates()
+    # print("stats0: ", stats)
     if hasattr(checkpoint_utils.save_checkpoint, 'best'):
         key = 'best_{0}'.format(args.best_checkpoint_metric)
         best_function = max if args.maximize_best_checkpoint_metric else min
-
+        
+        # print("stats1: ", stats,"extra_meters: ",extra_meters)
         current_metric = None
         if args.best_checkpoint_metric == 'loss':
             current_metric = stats['loss'].avg
