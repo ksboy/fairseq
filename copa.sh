@@ -5,10 +5,10 @@ NUM_CLASSES=2
 MAX_SENTENCES=16        # Batch size.
 
 # example_per_epoch =400*2  batch_size =16  batch_per_epoch = 25*2
-CUDA_VISIBLE_DEVICES=0 python train.py COPA-bin/ \
+CUDA_VISIBLE_DEVICES=3 python train.py COPA-bin/ \
 --no-shuffle \
---restore-file '../roberta.large.mnli/model.pt' \
---save-dir '../roberta.large.mnli/' \
+--restore-file '../roberta.large/swag/checkpoint_best.pt' \
+--save-dir '../roberta.large/' \
 --max-positions 512 \
 --max-sentences $MAX_SENTENCES \
 --max-tokens 4400 \
