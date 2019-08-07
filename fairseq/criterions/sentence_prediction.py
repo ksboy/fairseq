@@ -13,6 +13,7 @@ from fairseq import utils
 from . import FairseqCriterion, register_criterion
 from sklearn.metrics import f1_score
 
+
 @register_criterion('sentence_prediction')
 class SentencePredictionCriterion(FairseqCriterion):
 
@@ -31,21 +32,18 @@ class SentencePredictionCriterion(FairseqCriterion):
         2) the sample size, which is used as the denominator for the gradient
         3) logging outputs to display while training
         """
-        features, extra = model(**sample['net_input'], features_only=True)
-        padding_mask = sample['net_input']['src_tokens'].eq(self.padding_idx)
-
         assert hasattr(model, 'classification_heads') and \
-            'sentence_classification_head' in model.classification_heads, \
+               'sentence_classification_head' in model.classification_heads, \
             "model must provide sentence classification head for --criterion=sentence_prediction"
 
-        logits = model.classification_heads['sentence_classification_head'](
-            features,
-            padding_mask=padding_mask,
+        logits, _ = model(
+            **sample['net_input'],
+            features_only=True,
+            classification_head_name='sentence_classification_head',
         )
-
         targets = model.get_targets(sample, [logits]).view(-1)
         sample_size = targets.numel()
-        print(logits,targets)
+        print(logits, targets)
 
         if not self.args.regression_target:
             loss = F.nll_loss(
@@ -73,7 +71,7 @@ class SentencePredictionCriterion(FairseqCriterion):
             preds = logits.max(dim=1)[1]
             logging_output.update(
                 ncorrect=(preds == targets).sum().item(),
-                preds= preds,
+                preds=preds,
                 targets=targets
             )
         return loss, sample_size, logging_output
@@ -86,23 +84,22 @@ class SentencePredictionCriterion(FairseqCriterion):
         nsentences = sum(log.get('nsentences', 0) for log in logging_outputs)
         sample_size = sum(log.get('sample_size', 0) for log in logging_outputs)
         # print(tuple(log.get('preds', 0) for log in logging_outputs))
-        preds= torch.cat(tuple(log.get('preds', 0) for log in logging_outputs), 0)
-        targets= torch.cat(tuple(log.get('targets', 0) for log in logging_outputs), 0)
+        preds = torch.cat(tuple(log.get('preds', 0) for log in logging_outputs), 0)
+        targets = torch.cat(tuple(log.get('targets', 0) for log in logging_outputs), 0)
         # print(preds, targets)
 
-        
         agg_output = {
             'loss': loss_sum / sample_size / math.log(2),
             'ntokens': ntokens,
             'nsentences': nsentences,
             'sample_size': sample_size,
         }
-        
+
         agg_output.update(preds=preds.cpu())
         agg_output.update(targets=targets.cpu())
         if len(logging_outputs) > 0 and 'ncorrect' in logging_outputs[0]:
             ncorrect = sum(log.get('ncorrect', 0) for log in logging_outputs)
-            agg_output.update(accuracy=ncorrect/nsentences)
+            agg_output.update(accuracy=ncorrect / nsentences)
             agg_output.update(f1=f1_score(targets.cpu(), preds.cpu(), average='macro'))
 
         if sample_size != ntokens:

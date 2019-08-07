@@ -20,6 +20,7 @@ from fairseq.meters import AverageMeter, StopwatchMeter
 
 from sklearn.metrics import f1_score
 
+
 def main(args, init_distributed=False):
     utils.import_user_module(args)
 
@@ -144,10 +145,10 @@ def train(args, trainer, task, epoch_itr):
 
         num_updates = trainer.get_num_updates()
         if (
-            not args.disable_validation
-            and args.save_interval_updates > 0
-            and num_updates % args.save_interval_updates == 0
-            and num_updates > 0
+                not args.disable_validation
+                and args.save_interval_updates > 0
+                and num_updates % args.save_interval_updates == 0
+                and num_updates > 0
         ):
             valid_losses = validate(args, trainer, task, epoch_itr, valid_subsets)
             checkpoint_utils.save_checkpoint(args, trainer, epoch_itr, valid_losses[0])
@@ -227,7 +228,7 @@ def validate(args, trainer, task, epoch_itr, subsets):
             if meter is not None:
                 meter.reset()
         extra_meters = collections.defaultdict(lambda: AverageMeter())
-        preds, targets =[], []
+        preds, targets = [], []
         for sample in progress:
             # print(sample)
             log_output = trainer.valid_step(sample)
@@ -237,7 +238,7 @@ def validate(args, trainer, task, epoch_itr, subsets):
                     continue
                 elif k in ['f1']:
                     continue
-                elif k== 'preds':
+                elif k == 'preds':
                     preds.extend(v.tolist())
                 elif k == "targets":
                     targets.extend(v.tolist())
@@ -255,7 +256,7 @@ def validate(args, trainer, task, epoch_itr, subsets):
             # print(k,meter)
             stats[k] = meter.avg
         progress.print(stats, tag=subset, step=trainer.get_num_updates())
-        
+
         # print("stats3: ", stats)
         valid_losses.append(
             stats[args.best_checkpoint_metric].avg
@@ -279,7 +280,7 @@ def get_valid_stats(trainer, args, extra_meters=None):
     if hasattr(checkpoint_utils.save_checkpoint, 'best'):
         key = 'best_{0}'.format(args.best_checkpoint_metric)
         best_function = max if args.maximize_best_checkpoint_metric else min
-        
+
         # print("stats1: ", stats,"extra_meters: ",extra_meters)
         current_metric = None
         if args.best_checkpoint_metric == 'loss':
@@ -334,7 +335,7 @@ def cli_main():
             print('| NOTE: you may get better performance with: --ddp-backend=no_c10d')
         torch.multiprocessing.spawn(
             fn=distributed_main,
-            args=(args, ),
+            args=(args,),
             nprocs=args.distributed_world_size,
         )
     else:
