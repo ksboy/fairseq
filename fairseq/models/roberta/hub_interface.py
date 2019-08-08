@@ -3,6 +3,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import List
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -72,7 +74,7 @@ class RobertaHubInterface(nn.Module):
             return sentences[0]
         return sentences
 
-    def extract_features(self, tokens: torch.LongTensor, return_all_hiddens=False) -> torch.Tensor:
+    def extract_features(self, tokens: torch.LongTensor, return_all_hiddens: bool = False) -> torch.Tensor:
         if tokens.dim() == 1:
             tokens = tokens.unsqueeze(0)
         if tokens.size(-1) > self.model.max_positions():
@@ -102,3 +104,77 @@ class RobertaHubInterface(nn.Module):
         features = self.extract_features(tokens)
         logits = self.model.classification_heads[head](features)
         return F.log_softmax(logits, dim=-1)
+
+    def extract_features_aligned_to_words(self, sentence: str, return_all_hiddens: bool = False) -> torch.Tensor:
+        """Extract RoBERTa features, aligned to spaCy's word-level tokenizer."""
+        from fairseq.models.roberta import alignment_utils
+        from spacy.tokens import Doc
+
+        nlp = alignment_utils.spacy_nlp()
+        tokenizer = alignment_utils.spacy_tokenizer()
+
+        # tokenize both with GPT-2 BPE and spaCy
+        bpe_toks = self.encode(sentence)
+        spacy_toks = tokenizer(sentence)
+        spacy_toks_ws = [t.text_with_ws for t in tokenizer(sentence)]
+        alignment = alignment_utils.align_bpe_to_words(self, bpe_toks, spacy_toks_ws)
+
+        # extract features and align them
+        features = self.extract_features(bpe_toks, return_all_hiddens=return_all_hiddens)
+        features = features.squeeze(0)
+        aligned_feats = alignment_utils.align_features_to_words(self, features, alignment)
+
+        # wrap in spaCy Doc
+        doc = Doc(
+            nlp.vocab,
+            words=['<s>'] + [x.text for x in spacy_toks] + ['</s>'],
+            spaces=[True] + [x.endswith(' ') for x in spacy_toks_ws[:-1]] + [True, False],
+        )
+        assert len(doc) == aligned_feats.size(0)
+        doc.user_token_hooks['vector'] = lambda token: aligned_feats[token.i]
+        return doc
+
+    def fill_mask(self, masked_input: str, topk: int = 5):
+        masked_token = '<mask>'
+        assert masked_token in masked_input and masked_input.count(masked_token) == 1, \
+            "Please add one {0} token for the input, eg: 'He is a {0} guy'".format(masked_token)
+
+        text_spans = masked_input.split(masked_token)
+        text_spans_bpe = (' {0} '.format(masked_token)).join(
+            [self.bpe.encode(text_span.rstrip()) for text_span in text_spans]
+        ).strip()
+        tokens = self.task.source_dictionary.encode_line(
+            '<s> ' + text_spans_bpe,
+            append_eos=True,
+        )
+
+        masked_index = (tokens == self.task.mask_idx).nonzero()
+        if tokens.dim() == 1:
+            tokens = tokens.unsqueeze(0)
+
+        features, extra = self.model(
+            tokens.long().to(device=self.device),
+            features_only=False,
+            return_all_hiddens=False,
+        )
+        logits = features[0, masked_index, :].squeeze()
+        prob = logits.softmax(dim=0)
+        values, index = prob.topk(k=topk, dim=0)
+        topk_predicted_token_bpe = self.task.source_dictionary.string(index)
+
+        topk_filled_outputs = []
+        for index, predicted_token_bpe in enumerate(topk_predicted_token_bpe.split(' ')):
+            predicted_token = self.bpe.decode(predicted_token_bpe)
+            if " {0}".format(masked_token) in masked_input:
+                topk_filled_outputs.append((
+                    masked_input.replace(
+                        ' {0}'.format(masked_token), predicted_token
+                    ),
+                    values[index].item(),
+                ))
+            else:
+                topk_filled_outputs.append((
+                    masked_input.replace(masked_token, predicted_token),
+                    values[index].item(),
+                ))
+        return topk_filled_outputs
