@@ -121,3 +121,5 @@ log*
 dict.txt
 vocab.bpe
 encoder.json
+
+outputs/

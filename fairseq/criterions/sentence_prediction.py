@@ -43,7 +43,7 @@ class SentencePredictionCriterion(FairseqCriterion):
         )
         targets = model.get_targets(sample, [logits]).view(-1)
         sample_size = targets.numel()
-        print(logits, targets)
+        # print(logits, targets)
 
         if not self.args.regression_target:
             loss = F.nll_loss(

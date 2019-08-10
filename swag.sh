@@ -4,8 +4,8 @@ LR=2e-05                # Peak LR for polynomial LR scheduler.
 NUM_CLASSES=4
 MAX_SENTENCES=16        # Batch size.
 
-# example_per_epoch =73545*4  batch_size =16  batch_per_epoch = 18387
-CUDA_VISIBLE_DEVICES=0 python train.py SWAG-bin/ \
+# example_per_epoch =73545*4  batch_size =16*2  batch_per_epoch = 18387
+CUDA_VISIBLE_DEVICES=2,3 python train.py SWAG-bin/ \
 --no-shuffle \
 --restore-file '../roberta.large/model.pt' \
 --save-dir '../roberta.large/' \
