@@ -1,19 +1,19 @@
-TOTAL_NUM_UPDATES=2036  # 10 epochs through RTE for bsz 16
+TOTAL_NUM_UPDATES=790  # 10 epochs through RTE for bsz 16
 EPOCHS=10
-WARMUP_UPDATES=122      # 6 percent of the number of updates
+WARMUP_UPDATES=50      # 6 percent of the number of updates
 LR=2e-05                # Peak LR for polynomial LR scheduler.
 NUM_CLASSES=2
-MAX_SENTENCES=16        # Batch size.
+MAX_SENTENCES=32        # Batch size.
 
-# example_per_epoch =2490  batch_size =16*2  batch_per_epoch = 79
-for SEED in 3 7 42 50 87
+# example_per_epoch =2490  batch_size =32  batch_per_epoch = 79
+for SEED in 7 42 50 87
 do 
-CUDA_VISIBLE_DEVICES==2,3 python train.py RTE-bin/ \
+CUDA_VISIBLE_DEVICES=2 python train.py RTE-bin/ \
 --seed $SEED \
 --no-shuffle \
 --no-epoch-checkpoints \
---restore-file ../roberta.large.mnli/model.pt \
---save-dir ../roberta.large.mnli/rte/$SEED \
+--restore-file ../../../../roberta.large.mnli/model.pt \
+--save-dir ./outputs/rte/$SEED \
 --max-positions 512 \
 --max-sentences $MAX_SENTENCES \
 --max-tokens 4400 \
@@ -32,6 +32,7 @@ CUDA_VISIBLE_DEVICES==2,3 python train.py RTE-bin/ \
 --max-epoch $EPOCHS \
 --find-unused-parameters \
 --best-checkpoint-metric accuracy --maximize-best-checkpoint-metric;
+# --fp16 --fp16-init-scale 4 --threshold-loss-scale 1 --fp16-scale-window 128 \
 
 done
 # bash ./examples/roberta/preprocess_SuperGLUE_tasks.sh  ../data-superglue-csv RTE

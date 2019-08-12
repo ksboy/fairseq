@@ -18,7 +18,7 @@ from fairseq.data import iterators
 from fairseq.trainer import Trainer
 from fairseq.meters import AverageMeter, StopwatchMeter
 
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, accuracy_score
 
 
 def main(args, init_distributed=False):
@@ -130,9 +130,9 @@ def train(args, trainer, task, epoch_itr):
         for k, v in log_output.items():
             if k in ['loss', 'nll_loss', 'ntokens', 'nsentences', 'sample_size']:
                 continue  # these are already logged above
-            if 'loss' in k or k == 'accuracy':
+            if 'loss' in k or k in ['accuracy']:
                 extra_meters[k].update(v, log_output['sample_size'])
-            if k in ['preds', 'targets', 'f1']:
+            if k in ['preds', 'targets','f1' ,'acc_f1_avg']:
                 continue
             else:
                 extra_meters[k].update(v)
@@ -236,7 +236,7 @@ def validate(args, trainer, task, epoch_itr, subsets):
             for k, v in log_output.items():
                 if k in ['loss', 'nll_loss', 'ntokens', 'nsentences', 'sample_size']:
                     continue
-                elif k in ['f1']:
+                elif k in ['f1','accuracy',"acc_f1_avg"]:
                     continue
                 elif k == 'preds':
                     preds.extend(v.tolist())
@@ -248,13 +248,19 @@ def validate(args, trainer, task, epoch_itr, subsets):
         # log validation stats
         # print("extra_meters: ", extra_meters)
         # print(f1_score(targets, preds, average='macro'))
-        extra_meters['f1'].update(f1_score(targets, preds, average='macro'))
-
+        f1= f1_score(targets, preds, average='macro')
+        acc= accuracy_score(targets, preds)
+        # print("acc: ",acc, " f1: ",f1)
+        extra_meters['f1'].update(f1)
+        extra_meters['accuracy'].update(acc)
+        extra_meters['acc_f1_avg'].update((acc+f1)/2.0)
+        # print(f1,acc)
         stats = get_valid_stats(trainer, args, extra_meters)
         # print("stats2: ", stats)
         for k, meter in extra_meters.items():
             # print(k,meter)
             stats[k] = meter.avg
+        # print(stats)
         progress.print(stats, tag=subset, step=trainer.get_num_updates())
 
         # print("stats3: ", stats)

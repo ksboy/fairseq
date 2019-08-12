@@ -1,19 +1,19 @@
-TOTAL_NUM_UPDATES=300  # 10 epochs through RTE for bsz 16
+TOTAL_NUM_UPDATES=300  # 12 epochs through RTE for bsz 16
 EPOCHS=12
 WARMUP_UPDATES=30      # 6 percent of the number of updates
 LR=1e-05                # Peak LR for polynomial LR scheduler.
 NUM_CLASSES=2
-MAX_SENTENCES=16        # Batch size.
+MAX_SENTENCES=32        # Batch size.
 
-# example_per_epoch =400*2  batch_size =16*2  batch_per_epoch = 25
+# example_per_epoch =400*2  batch_size =32  batch_per_epoch = 25
 for SEED in 3 7 42 50 87
 do
-CUDA_VISIBLE_DEVICES=2,3 python train.py COPA-bin/ \
+CUDA_VISIBLE_DEVICES=3 python train.py COPA-bin/ \
 --seed $SEED \
 --no-shuffle \
 --no-epoch-checkpoints \
---restore-file ../roberta.large/swag/checkpoint_best.pt \
---save-dir ../roberta.large/copa/$SEED \
+--restore-file ../../../../roberta.large/swag/checkpoint_best.pt \
+--save-dir ./outputs/copa/$SEED \
 --max-positions 512 \
 --max-sentences $MAX_SENTENCES \
 --max-tokens 4400 \

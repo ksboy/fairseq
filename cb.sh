@@ -12,7 +12,7 @@ CUDA_VISIBLE_DEVICES=3 python train.py CB-bin/ \
 --seed $SEED \
 --no-shuffle \
 --no-epoch-checkpoints \
---restore-file ../../../roberta.large.mnli/model.pt \
+--restore-file ../../../../roberta.large.mnli/model.pt \
 --save-dir ./outputs/cb/$SEED \
 --max-positions 512 \
 --max-sentences $MAX_SENTENCES \
@@ -31,6 +31,6 @@ CUDA_VISIBLE_DEVICES=3 python train.py CB-bin/ \
 --fp16 --fp16-init-scale 4 --threshold-loss-scale 1 --fp16-scale-window 128 \
 --max-epoch $EPOCHS \
 --find-unused-parameters \
---best-checkpoint-metric f1 --maximize-best-checkpoint-metric;
+--best-checkpoint-metric acc_f1_avg --maximize-best-checkpoint-metric;
 
 done

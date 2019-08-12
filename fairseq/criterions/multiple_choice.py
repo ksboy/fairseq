@@ -55,7 +55,7 @@ class MultipleChoiceCriterion(FairseqCriterion):
         sample_size = targets.numel()
         targets = torch.reshape(targets, (-1, num_classes))
         # print(targets)
-        _, targets = torch.max(targets, -1)
+        _, targets = torch.min(targets, -1)
         # print(targets)
 
         if not self.args.regression_target:

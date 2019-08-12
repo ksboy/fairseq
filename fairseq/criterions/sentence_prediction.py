@@ -99,9 +99,11 @@ class SentencePredictionCriterion(FairseqCriterion):
         agg_output.update(targets=targets.cpu())
         if len(logging_outputs) > 0 and 'ncorrect' in logging_outputs[0]:
             ncorrect = sum(log.get('ncorrect', 0) for log in logging_outputs)
-            agg_output.update(accuracy=ncorrect / nsentences)
-            agg_output.update(f1=f1_score(targets.cpu(), preds.cpu(), average='macro'))
-
+            acc = ncorrect / nsentences
+            agg_output.update(accuracy= acc)
+            f1 = f1_score(targets.cpu(), preds.cpu(), average='macro')
+            agg_output.update(f1= f1)
+            agg_output.update(acc_f1_avg= (acc+f1)/2.0)
         if sample_size != ntokens:
             agg_output['nll_loss'] = loss_sum / ntokens / math.log(2)
         return agg_output
