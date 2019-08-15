@@ -103,7 +103,7 @@ class RobertaHubInterface(nn.Module):
     def predict(self, head: str, tokens: torch.LongTensor):
         features = self.extract_features(tokens)
         logits = self.model.classification_heads[head](features)
-        return F.log_softmax(logits, dim=-1)
+        return logits
 
     def extract_features_aligned_to_words(self, sentence: str, return_all_hiddens: bool = False) -> torch.Tensor:
         """Extract RoBERTa features, aligned to spaCy's word-level tokenizer."""
